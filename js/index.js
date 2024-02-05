@@ -12,6 +12,20 @@ var uniforms;
 init();
 animate();
 
+//HEXDECIMAL TO RGB CONVERSION
+function convertHexToGLSLRGB(hex){
+    var r = parseInt(hex.substring(1,3),16)/255.0;
+    var g = parseInt(hex.substring(3,5),16)/255.0;
+    var b = parseInt(hex.substring(5,7),16)/255.0;
+    return new THREE.Vector3(r,g,b);
+}
+function extractNumbersFromString(string){
+    var numbers = string.match(/\d+/g).map(Number);
+    console.log("numbers:"+ numbers);
+    return numbers;
+    
+}
+//INITIALIZE
 function init(){
     headings = document.getElementById('headings');
     container = document.getElementById('container');
@@ -19,14 +33,45 @@ function init(){
     camera.position.z = 1.0;
     scene = new THREE.Scene();
     var geometry = new THREE.PlaneBufferGeometry(2.0,2.0);
+
     uniforms = {
+        //Uniforms origined in JS:
         u_time:{type:"f", value: 1.0},
         u_mouse:{type:"v2", value: new THREE.Vector2()},
         u_resolution:{type:"v2", value: new THREE.Vector2()},
-        u_num_drops:{type:"f", value: 20.0}
+        u_num_drops:{type:"f", value: 20.0},
+        whole_size:{type:"f", value: 50.0},
+
+        //Uniforms extracted from CSS Vars:
+        ripple_base_size:{type:"f", value: 
+        getComputedStyle(document.body).getPropertyValue('--ripples-width')},
+
+        ripple_number:{type:"f", value:
+        getComputedStyle(document.body).getPropertyValue('--ripples-number')},
+
+        ripple_bleed:{type:"f", value:
+        getComputedStyle(document.body).getPropertyValue('--ripple-bleed')},
+    
+        center_clear_area:{type:"f", value: 
+        getComputedStyle(document.body).getPropertyValue('--center-clear-area')},
+
+        primary_color:{type:"v3", value: 
+        convertHexToGLSLRGB(getComputedStyle(document.body).getPropertyValue('--primary-color'))},
+
+        secondary_color:{type:"v3", value: 
+        convertHexToGLSLRGB(getComputedStyle(document.body).getPropertyValue('--secondary-color'))},
+
+        speed_factor:{type:"f", value:
+        getComputedStyle(document.body).getPropertyValue('--speed-factor')},
+
+        direction:{type:"f", value:
+        getComputedStyle(document.body).getPropertyValue('--direction')},
     }
+
+    
+    
     var material = new THREE.ShaderMaterial({
-        uniforms:uniforms ,
+        uniforms:uniforms,
         vertexShader: vrtx,
         fragmentShader: frgmt
 

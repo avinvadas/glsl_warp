@@ -36423,7 +36423,7 @@ if (typeof window !== 'undefined') {
   }
 }
 },{}],"js/shaders/shader01_frgmt.glsl":[function(require,module,exports) {
-module.exports = "#ifdef GL_ES\nprecision mediump float;\n#define GLSLIFY 1\n#endif\n#define PI 3.14159265359;\nuniform vec2 u_resolution;\nuniform vec2 u_mouse;\nuniform float u_time;\n\nvoid main(){\n   vec2 st = gl_FragCoord.xy/u_resolution.xy;\n   \n   vec2 mouseRatio=  vec2(u_mouse.xy +0.1) / vec2(u_resolution.xy +0.21);\n   \n   st = st *2.0 -0.5;\n\n \n   //setting center and placement:\n \n  float pct = distance(vec2(pow(st.x, 0.33+mouseRatio.y), pow(st.y, pow(1.0-mouseRatio.x , 0.75))),vec2(0.5,0.5));\n  \n\n //setting repetitional pattern:\n  float d = 0.0;\n  float ripple_size= 0.5;\n  float wrap_size = 0.5;\n  float ripple_number = 8.0;\n  d = length( (pct-fract(u_time*0.01))) *1.25- 1.;\n  vec2 dMouse = vec2(((pct * mouseRatio.x)+0.15-2.0)* 0.5, ((pct * mouseRatio.y)+0.15)*0.5);\n \n\n \n  vec3 color= vec3(step(pct,wrap_size))-vec3(step(ripple_size, fract(d * ripple_number +( dMouse.y / dMouse.x) )))-\n  vec3(smoothstep(0.5, 0.0, pct*1.75));\n  \n//inverting b/w\n  vec3 color_invert = vec3(1.0-color);\n\n//setting final frag shade:\n   gl_FragColor = vec4( vec3(color),1.0);\n}";
+module.exports = "\n#ifdef GL_ES\nprecision mediump float;\n#define GLSLIFY 1\n#endif\n#define PI 3.14159265359\nuniform vec2 u_resolution;\nuniform vec2 u_mouse;\nuniform float u_time;\n\nuniform float ripple_base_size;\nuniform float whole_size;\nuniform float ripple_number;\nuniform float ripple_bleed;\nuniform float center_clear_area;\nuniform vec3 primary_color;\nuniform vec3 secondary_color;\nuniform float speed_factor;\nuniform float direction;\n\nvoid main(){\n   vec2 st = gl_FragCoord.xy/u_resolution.xy;\n   st = st *2.0 -0.5;\n   vec2 mouseRatio=  vec2(u_mouse.xy ) / vec2(u_resolution.xy );\n   vec2 dMouse = abs(vec2(0.5)- mouseRatio) ;\n   \n\n   //setting center and placement:\n \n  float pct = pow(distance(sin(st)*2.0 , vec2(sin(1.0))),(abs( 1.0-dMouse.y)/ abs(1.0- dMouse.x))*3.0);\n\n //setting repetitional pattern:\n  \n   float ripple_size=  sin(ripple_base_size); //width of a single ripple\n //  whole_size = 15.; //overall size of the pattern\n  //ripple_number = 3.0; //higher number = more ripples\n  float d = length( (direction * pct- (u_time* (speed_factor*0.01)))); //distance from center\n  \n \n\n \n  vec3 ripples= vec3(\n    \n    step(pct,whole_size))-\n    vec3(smoothstep(ripple_size,ripple_size+ ripple_bleed, fract(d * ripple_number)))* //dark rings\n    vec3(smoothstep(ripple_size,ripple_size+ ripple_bleed, fract(d * ripple_number * 2.))); \n  \n  vec3 levels = vec3(ripples );\n//inverting b/w\nvec3 bgColor = vec3(secondary_color);\nvec3 levels_invert =  vec3(1.0 - levels);\nvec3 color = ( vec3(levels_invert *bgColor)) + (primary_color * levels);\nvec3 finalColor = color;\n//write a function converting hexadecimal colors to d\n//setting final frag shade:\n   gl_FragColor = vec4( finalColor ,1.0);\n}";
 },{}],"js/shaders/shader01_vrtx.glsl":[function(require,module,exports) {
 module.exports = "#define GLSLIFY 1\nvec4 permute(vec4 x){return mod(((x*34.0)+1.0)*x, 289.0);}\nvec4 taylorInvSqrt(vec4 r){return 1.79284291400159 - 0.85373472095314 * r;}\nvec3 fade(vec3 t) {return t*t*t*(t*(t*6.0-15.0)+10.0);}\n\nfloat cnoise(vec3 P){\n  vec3 Pi0 = floor(P); // Integer part for indexing\n  vec3 Pi1 = Pi0 + vec3(1.0); // Integer part + 1\n  Pi0 = mod(Pi0, 289.0);\n  Pi1 = mod(Pi1, 289.0);\n  vec3 Pf0 = fract(P); // Fractional part for interpolation\n  vec3 Pf1 = Pf0 - vec3(1.0); // Fractional part - 1.0\n  vec4 ix = vec4(Pi0.x, Pi1.x, Pi0.x, Pi1.x);\n  vec4 iy = vec4(Pi0.yy, Pi1.yy);\n  vec4 iz0 = Pi0.zzzz;\n  vec4 iz1 = Pi1.zzzz;\n\n  vec4 ixy = permute(permute(ix) + iy);\n  vec4 ixy0 = permute(ixy + iz0);\n  vec4 ixy1 = permute(ixy + iz1);\n\n  vec4 gx0 = ixy0 / 7.0;\n  vec4 gy0 = fract(floor(gx0) / 7.0) - 0.5;\n  gx0 = fract(gx0);\n  vec4 gz0 = vec4(0.5) - abs(gx0) - abs(gy0);\n  vec4 sz0 = step(gz0, vec4(0.0));\n  gx0 -= sz0 * (step(0.0, gx0) - 0.5);\n  gy0 -= sz0 * (step(0.0, gy0) - 0.5);\n\n  vec4 gx1 = ixy1 / 7.0;\n  vec4 gy1 = fract(floor(gx1) / 7.0) - 0.5;\n  gx1 = fract(gx1);\n  vec4 gz1 = vec4(0.5) - abs(gx1) - abs(gy1);\n  vec4 sz1 = step(gz1, vec4(0.0));\n  gx1 -= sz1 * (step(0.0, gx1) - 0.5);\n  gy1 -= sz1 * (step(0.0, gy1) - 0.5);\n\n  vec3 g000 = vec3(gx0.x,gy0.x,gz0.x);\n  vec3 g100 = vec3(gx0.y,gy0.y,gz0.y);\n  vec3 g010 = vec3(gx0.z,gy0.z,gz0.z);\n  vec3 g110 = vec3(gx0.w,gy0.w,gz0.w);\n  vec3 g001 = vec3(gx1.x,gy1.x,gz1.x);\n  vec3 g101 = vec3(gx1.y,gy1.y,gz1.y);\n  vec3 g011 = vec3(gx1.z,gy1.z,gz1.z);\n  vec3 g111 = vec3(gx1.w,gy1.w,gz1.w);\n\n  vec4 norm0 = taylorInvSqrt(vec4(dot(g000, g000), dot(g010, g010), dot(g100, g100), dot(g110, g110)));\n  g000 *= norm0.x;\n  g010 *= norm0.y;\n  g100 *= norm0.z;\n  g110 *= norm0.w;\n  vec4 norm1 = taylorInvSqrt(vec4(dot(g001, g001), dot(g011, g011), dot(g101, g101), dot(g111, g111)));\n  g001 *= norm1.x;\n  g011 *= norm1.y;\n  g101 *= norm1.z;\n  g111 *= norm1.w;\n\n  float n000 = dot(g000, Pf0);\n  float n100 = dot(g100, vec3(Pf1.x, Pf0.yz));\n  float n010 = dot(g010, vec3(Pf0.x, Pf1.y, Pf0.z));\n  float n110 = dot(g110, vec3(Pf1.xy, Pf0.z));\n  float n001 = dot(g001, vec3(Pf0.xy, Pf1.z));\n  float n101 = dot(g101, vec3(Pf1.x, Pf0.y, Pf1.z));\n  float n011 = dot(g011, vec3(Pf0.x, Pf1.yz));\n  float n111 = dot(g111, Pf1);\n\n  vec3 fade_xyz = fade(Pf0);\n  vec4 n_z = mix(vec4(n000, n100, n010, n110), vec4(n001, n101, n011, n111), fade_xyz.z);\n  vec2 n_yz = mix(n_z.xy, n_z.zw, fade_xyz.y);\n  float n_xyz = mix(n_yz.x, n_yz.y, fade_xyz.x);\n  return 2.2 * n_xyz;\n}\n\nuniform float time;\nvarying float vNoise;\nvarying vec2 vUv;\nvoid main(){\nvec3 newposition = position;\nfloat PI = 3.1415925;\nfloat noise = cnoise(vec3(newposition.x * 0.1, position.z  +time / 10.0, 0.0));\n\nfloat dist = distance(uv, vec2(0.5));\nvNoise = noise;\nvUv = uv;\nnewposition.z += 0.035*cnoise(vec3(position.x*2.0, position.y*2.0 +time/ 30.0, 0.0));\n\n  gl_Position = projectionMatrix * modelViewMatrix * vec4(newposition, 1.0);\n}\n";
 },{}],"js/index.js":[function(require,module,exports) {
@@ -36446,7 +36446,21 @@ var headings;
 var camera, scene, renderer;
 var uniforms;
 init();
-animate();
+animate(); //HEXDECIMAL TO RGB CONVERSION
+
+function convertHexToGLSLRGB(hex) {
+  var r = parseInt(hex.substring(1, 3), 16) / 255.0;
+  var g = parseInt(hex.substring(3, 5), 16) / 255.0;
+  var b = parseInt(hex.substring(5, 7), 16) / 255.0;
+  return new THREE.Vector3(r, g, b);
+}
+
+function extractNumbersFromString(string) {
+  var numbers = string.match(/\d+/g).map(Number);
+  console.log("numbers:" + numbers);
+  return numbers;
+} //INITIALIZE
+
 
 function init() {
   headings = document.getElementById('headings');
@@ -36456,6 +36470,7 @@ function init() {
   scene = new THREE.Scene();
   var geometry = new THREE.PlaneBufferGeometry(2.0, 2.0);
   uniforms = {
+    //Uniforms origined in JS:
     u_time: {
       type: "f",
       value: 1.0
@@ -36471,6 +36486,43 @@ function init() {
     u_num_drops: {
       type: "f",
       value: 20.0
+    },
+    whole_size: {
+      type: "f",
+      value: 50.0
+    },
+    //Uniforms extracted from CSS Vars:
+    ripple_base_size: {
+      type: "f",
+      value: getComputedStyle(document.body).getPropertyValue('--ripples-width')
+    },
+    ripple_number: {
+      type: "f",
+      value: getComputedStyle(document.body).getPropertyValue('--ripples-number')
+    },
+    ripple_bleed: {
+      type: "f",
+      value: getComputedStyle(document.body).getPropertyValue('--ripple-bleed')
+    },
+    center_clear_area: {
+      type: "f",
+      value: getComputedStyle(document.body).getPropertyValue('--center-clear-area')
+    },
+    primary_color: {
+      type: "v3",
+      value: convertHexToGLSLRGB(getComputedStyle(document.body).getPropertyValue('--primary-color'))
+    },
+    secondary_color: {
+      type: "v3",
+      value: convertHexToGLSLRGB(getComputedStyle(document.body).getPropertyValue('--secondary-color'))
+    },
+    speed_factor: {
+      type: "f",
+      value: getComputedStyle(document.body).getPropertyValue('--speed-factor')
+    },
+    direction: {
+      type: "f",
+      value: getComputedStyle(document.body).getPropertyValue('--direction')
     }
   };
   var material = new THREE.ShaderMaterial({
@@ -36519,7 +36571,7 @@ function render() {
   uniforms.u_time.value += 0.05;
   renderer.render(scene, camera);
 }
-},{"three":"node_modules/three/build/three.module.js","./shaders/shader01_frgmt.glsl":"js/shaders/shader01_frgmt.glsl","./shaders/shader01_vrtx.glsl":"js/shaders/shader01_vrtx.glsl"}],"../../../.config/yarn/global/node_modules/parcel-bundler/src/builtins/hmr-runtime.js":[function(require,module,exports) {
+},{"three":"node_modules/three/build/three.module.js","./shaders/shader01_frgmt.glsl":"js/shaders/shader01_frgmt.glsl","./shaders/shader01_vrtx.glsl":"js/shaders/shader01_vrtx.glsl"}],"../../../../.config/yarn/global/node_modules/parcel-bundler/src/builtins/hmr-runtime.js":[function(require,module,exports) {
 var global = arguments[3];
 var OVERLAY_ID = '__parcel__error__overlay__';
 var OldModule = module.bundle.Module;
@@ -36547,7 +36599,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "55843" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "58807" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};
@@ -36723,5 +36775,5 @@ function hmrAcceptRun(bundle, id) {
     return true;
   }
 }
-},{}]},{},["../../../.config/yarn/global/node_modules/parcel-bundler/src/builtins/hmr-runtime.js","js/index.js"], null)
+},{}]},{},["../../../../.config/yarn/global/node_modules/parcel-bundler/src/builtins/hmr-runtime.js","js/index.js"], null)
 //# sourceMappingURL=/js.00a46daa.js.map
